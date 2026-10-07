@@ -1,0 +1,70 @@
+/**
+ * Osteoarthritis Preliminary Screening Scoring Engine
+ * Combines clinical symptom questionnaire (WOMAC/KOOS derived)
+ * with computer-vision gait & knee movement metrics.
+ */
+
+import {
+  SymptomResponses,
+  MovementMetrics,
+  RiskLevel,
+  QualityRating,
+  ScreeningResult,
+  UserInfo,
+} from '../types/screening';
+
+export function rateMetric(score: number): QualityRating {
+  if (score >= 78) return 'Good';
+  if (score >= 50) return 'Moderate';
+  return 'Reduced';
+}
+
+export function calculateScreeningScore(
+  symptoms: SymptomResponses,
+  metrics: MovementMetrics
+): { totalScore: number; riskLevel: RiskLevel } {
+  // 1. Symptom Component (Weight: 40%)
+  let symptomRaw = 0;
+  if (symptoms.kneePain === 'mild') symptomRaw += 8;
+  else if (symptoms.kneePain === 'moderate') symptomRaw += 18;
+  else if (symptoms.kneePain === 'severe') symptomRaw += 28;
+
+  if (symptoms.kneeStiffness === 'sometimes') symptomRaw += 4;
+  else if (symptoms.kneeStiffness === 'frequently') symptomRaw += 9;
+  else if (symptoms.kneeStiffness === 'almost-always') symptomRaw += 14;
+
+  if (symptoms.walkingDifficulty === 'sometimes') symptomRaw += 8;
+  else if (symptoms.walkingDifficulty === 'frequently') symptomRaw += 16;
+
+  if (symptoms.stairDifficulty === 'mild') symptomRaw += 5;
+  else if (symptoms.stairDifficulty === 'moderate') symptomRaw += 10;
+  else if (symptoms.stairDifficulty === 'severe') symptomRaw += 16;
+
+  if (symptoms.morningStiffnessDuration === 'under-30-min') symptomRaw += 5;
+  else if (symptoms.morningStiffnessDuration === 'over-30-min') symptomRaw += 10;
+
+  if (symptoms.jointCrepitus === 'yes') symptomRaw += 6;
+  else if (symptoms.jointCrepitus === 'unsure') symptomRaw += 2;
+
+  const symptomContribution = Math.min(40, (symptomRaw / 90) * 40);
+
+  // 2. Posture Component (Weight: 18%)
+  const postureRisk = (100 - metrics.postureScore) * 0.18;
+
+  // 3. Walking Symmetry Component (Weight: 22%)
+  const walkingRisk = (100 - metrics.walkingSymmetryScore) * 0.22;
+
+  // 4. Knee Movement & Flexion Component (Weight: 20%)
+  const kneeRisk = (100 - metrics.kneeMovementScore) * 0.20;
+
+  const totalScore = Math.round(
+    Math.min(100, Math.max(0, symptomContribution + postureRisk + walkingRisk + kneeRisk))
+  );
+
+  let riskLevel: RiskLevel = 'LOW RISK';
+  if (totalScore >= 66) riskLevel = 'HIGH RISK';
+  else if (totalScore >= 33) riskLevel = 'MEDIUM RISK';
+  else riskLevel = 'LOW RISK';
+
+  return { totalScore, riskLevel };
+}

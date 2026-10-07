@@ -1,0 +1,54 @@
+import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
+import { DetectedPose, LandmarkPoint } from '../types/screening';
+
+export class PoseDetectionEngine {
+  private poseLandmarker: PoseLandmarker | null = null;
+  private isInitializing = false;
+  private lastVideoTime = -1;
+
+  public async initialize(): Promise<boolean> {
+    if (this.poseLandmarker) return true;
+    if (this.isInitializing) return false;
+    this.isInitializing = true;
+
+    try {
+      const vision = await FilesetResolver.forVisionTasks(
+        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+      );
+
+      this.poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath:
+            'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+          delegate: 'GPU',
+        },
+        runningMode: 'VIDEO',
+        numPoses: 1,
+        minPoseDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5,
+      });
+
+      this.isInitializing = false;
+      return true;
+    } catch (err) {
+      console.warn('MediaPipe fallback active:', err);
+      this.isInitializing = false;
+      return false;
+    }
+  }
+
+  public detect(video: HTMLVideoElement, timestampMs: number) {
+    if (this.poseLandmarker && video.readyState >= 2) {
+      if (video.currentTime !== this.lastVideoTime) {
+        this.lastVideoTime = video.currentTime;
+        const result = this.poseLandmarker.detectForVideo(video, timestampMs);
+        if (result.landmarks && result.landmarks.length > 0) {
+          const raw = result.landmarks[0];
+          // Keypoints: 11,12=shoulders, 23,24=hips, 25,26=knees, 27,28=ankles
+          return this.processLandmarks(raw);
+        }
+      }
+    }
+    return this.fallbackDetect(video, timestampMs);
+  }
+}

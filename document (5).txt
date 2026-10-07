@@ -1,0 +1,38 @@
+import { AuthorizedUser, AuthState } from '../types/auth';
+
+export const AUTHORIZED_CREDENTIALS = [
+  {
+    email: '26r21a05h4@mlrit.ac.in',
+    password: 'ClinicalLead#2026',
+    user: {
+      id: 'usr_mlrit_01',
+      email: '26r21a05h4@mlrit.ac.in',
+      name: 'Lead Investigator (MLRIT)',
+      role: 'Principal Evaluator',
+      institution: 'MLR Institute of Technology · Bio-AI Lab',
+      licenseOrId: 'MLRIT-CSE-2026',
+      avatarInitials: 'LI',
+    },
+  },
+  {
+    email: 'dr.evaluator@oa-screening.org',
+    password: 'ClinicalPass#2026',
+    user: {
+      id: 'usr_ortho_02',
+      email: 'dr.evaluator@oa-screening.org',
+      name: 'Dr. Sarah Chen, MD',
+      role: 'Orthopedic Specialist',
+      institution: 'University Musculoskeletal Center',
+      licenseOrId: 'MED-OA-89104',
+      avatarInitials: 'SC',
+    },
+  },
+];
+
+export function validateCredentials(email: string, password: string): AuthorizedUser | null {
+  const normalizedEmail = email.trim().toLowerCase();
+  const account = AUTHORIZED_CREDENTIALS.find(
+    (acc) => acc.email.toLowerCase() === normalizedEmail && acc.password === password
+  );
+  return account ? account.user : null;
+}
