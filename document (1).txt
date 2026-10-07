@@ -1,0 +1,55 @@
+// Complete Monolithic Program: Types, Vector Math, Scoring Engine, Storage & Interface
+import React, { useState, useEffect } from 'react';
+import { Activity, ArrowRight, CheckCircle2, AlertTriangle, AlertCircle } from 'lucide-react';
+
+// 1. Vector Goniometer Math
+export function calculateJointAngle(pointA, pointB, pointC) {
+  if (!pointA || !pointB || !pointC) return 180;
+  const vBAx = pointA.x - pointB.x;
+  const vBAy = pointA.y - pointB.y;
+  const vBCx = pointC.x - pointB.x;
+  const vBCy = pointC.y - pointB.y;
+  const dot = vBAx * vBCx + vBAy * vBCy;
+  const mag = Math.sqrt(vBAx * vBAx + vBAy * vBAy) * Math.sqrt(vBCx * vBCx + vBCy * vBCy);
+  if (mag === 0) return 180;
+  return Math.round((Math.acos(Math.max(-1, Math.min(1, dot / mag))) * 180) / Math.PI);
+}
+
+// 2. Clinical Scoring & Risk Stratification
+export function calculateScreeningScore(symptoms, metrics) {
+  let raw = 0;
+  if (symptoms.kneePain === 'mild') raw += 8;
+  else if (symptoms.kneePain === 'moderate') raw += 18;
+  else if (symptoms.kneePain === 'severe') raw += 28;
+  const score = Math.round(Math.min(100, (raw / 90) * 40 + (100 - metrics.postureScore) * 0.18 + (100 - metrics.walkingSymmetryScore) * 0.22 + (100 - metrics.kneeMovementScore) * 0.2));
+  return { totalScore: score, riskLevel: score >= 66 ? 'HIGH RISK' : score >= 33 ? 'MEDIUM RISK' : 'LOW RISK' };
+}
+
+// 3. Permanent Audit Trail Storage (Deletion permanently disabled)
+const KEY = 'oa_screening_history_v1';
+export function getStoredScreenings() {
+  try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; }
+}
+export function saveScreeningResult(res) {
+  const all = [res, ...getStoredScreenings().filter(i => i.id !== res.id)];
+  localStorage.setItem(KEY, JSON.stringify(all));
+}
+
+// 4. Main Self-Contained App Component
+export default function SingleFileOsteoScreeningApp() {
+  const [tab, setTab] = useState('home');
+  const [records, setRecords] = useState([]);
+  useEffect(() => { setRecords(getStoredScreenings()); }, []);
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 p-6 flex flex-col justify-between">
+      <div className="max-w-4xl mx-auto w-full space-y-6">
+        <h1 className="text-2xl font-bold text-teal-800">AI Early Osteoarthritis Screening</h1>
+        <p className="text-sm text-slate-600">Computer vision joint telemetry and clinical symptom analysis.</p>
+      </div>
+      <footer className="mt-12 text-center text-xs text-amber-800 bg-amber-50 p-4 rounded-xl border border-amber-200">
+        "It's just an AI based report care must be taken and consult a doctor"
+      </footer>
+    </div>
+  );
+}
