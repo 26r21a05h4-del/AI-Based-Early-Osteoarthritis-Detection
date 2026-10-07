@@ -1,0 +1,77 @@
+/**
+ * Biomechanical & Geometric Joint Math Utilities
+ * Calculates joint angles, symmetry indices, and alignment metrics
+ * from 2D/3D normalized pose landmarks.
+ */
+
+import { LandmarkPoint, JointAngles } from '../types/screening';
+
+/**
+ * Calculates the angle at joint B given three landmarks: A (Hip), B (Knee), C (Ankle).
+ * Returns angle in degrees [0, 180]. 180° indicates straight leg extension.
+ */
+export function calculateJointAngle(
+  pointA?: LandmarkPoint,
+  pointB?: LandmarkPoint,
+  pointC?: LandmarkPoint
+): number {
+  if (!pointA || !pointB || !pointC) return 180;
+
+  // Vector BA: from B to A (Knee to Hip)
+  const vBAx = pointA.x - pointB.x;
+  const vBAy = pointA.y - pointB.y;
+
+  // Vector BC: from B to C (Knee to Ankle)
+  const vBCx = pointC.x - pointB.x;
+  const vBCy = pointC.y - pointB.y;
+
+  const dotProduct = vBAx * vBCx + vBAy * vBCy;
+  const magBA = Math.sqrt(vBAx * vBAx + vBAy * vBAy);
+  const magBC = Math.sqrt(vBCx * vBCx + vBCy * vBCy);
+
+  if (magBA === 0 || magBC === 0) return 180;
+
+  let cosTheta = dotProduct / (magBA * magBC);
+  // Guard against floating point rounding outside [-1, 1]
+  cosTheta = Math.max(-1, Math.min(1, cosTheta));
+
+  const radians = Math.acos(cosTheta);
+  return Math.round((radians * 180) / Math.PI);
+}
+
+/**
+ * Calculates coronal trunk tilt relative to vertical.
+ * 0° means perfectly upright spine.
+ */
+export function calculateTrunkTilt(
+  leftShoulder?: LandmarkPoint,
+  rightShoulder?: LandmarkPoint,
+  leftHip?: LandmarkPoint,
+  rightHip?: LandmarkPoint
+): number {
+  if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) return 0;
+
+  const midShoulderX = (leftShoulder.x + rightShoulder.x) / 2;
+  const midShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+  const midHipX = (leftHip.x + rightHip.x) / 2;
+  const midHipY = (leftHip.y + rightHip.y) / 2;
+
+  const dx = midShoulderX - midHipX;
+  const dy = midShoulderY - midHipY; // Note: y is down in screen coordinates
+
+  const angleRad = Math.atan2(Math.abs(dx), Math.abs(dy));
+  return Number(((angleRad * 180) / Math.PI).toFixed(1));
+}
+
+/**
+ * Calculates Symmetry Index (SI) between two unilateral measures.
+ * 100% means perfect bilateral symmetry.
+ */
+export function calculateSymmetryIndex(leftVal: number, rightVal: number): number {
+  if (leftVal === 0 && rightVal === 0) return 100;
+  const denom = (leftVal + rightVal) / 2;
+  if (denom === 0) return 100;
+  const diff = Math.abs(leftVal - rightVal);
+  const asymmetryPct = (diff / denom) * 100;
+  return Math.max(0, Math.min(100, Math.round(100 - asymmetryPct)));
+}
