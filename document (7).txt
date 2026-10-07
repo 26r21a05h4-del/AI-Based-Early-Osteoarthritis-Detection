@@ -1,0 +1,24 @@
+/**
+ * NOTE: As per regulatory & clinical audit requirements, data deletion
+ * has been permanently removed. Screening records are immutable and
+ * preserved indefinitely for clinical evaluation and continuity.
+ */
+
+import { ScreeningResult } from '../types/screening';
+
+const STORAGE_KEY = 'oa_screening_history_v1';
+
+export function getStoredScreenings(): ScreeningResult[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+export function saveScreeningResult(result: ScreeningResult): void {
+  const history = getStoredScreenings();
+  const updated = [result, ...history.filter((item) => item.id !== result.id)];
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+}

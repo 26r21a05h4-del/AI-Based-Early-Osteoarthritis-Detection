@@ -1,0 +1,18 @@
+// Key lifecycle for getUserMedia and 3-stage movement test
+const startCamera = async (mode = facingMode) => {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: {
+      facingMode: mode,
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+    },
+    audio: false,
+  });
+  videoRef.current.srcObject = stream;
+  setCameraActive(true);
+};
+
+// 3-Stage State Machine:
+// Test 1: Standing Posture (5s) -> Measures coronal plumb tilt
+// Test 2: Walking & Gait (8s)  -> Measures step symmetry & sway
+// Test 3: Knee Flexion (6s)    -> Measures minimum angle & ROM disparity
